@@ -4,11 +4,11 @@ A minimal AI assistant built with Python, LangChain, and Groq that automatically
 
 ## Features
 
-- **Smart routing** — the LLM decides which tool to call (or none), with no hard-coded keyword matching
-- **Safe calculator** — evaluates arithmetic expressions using Python's `ast` module (no `eval`)
-- **Real-time weather** — fetches live conditions for any city via [Open-Meteo](https://open-meteo.com/) (free, no API key needed)
-- **Conversation memory** — retains chat history within the session
-- **Streamlit UI** — clean chat interface, no frontend code needed
+- **Smart routing**: the LLM decides which tool to call (or none), with no hard-coded keyword matching
+- **Safe calculator**: evaluates arithmetic expressions using Python's `ast` module (no `eval`)
+- **Real-time weather**: fetches live conditions for any city via [Open-Meteo](https://open-meteo.com/) (free, no API key needed)
+- **Conversation memory**: retains chat history within the session
+- **Streamlit UI**: clean chat interface, no frontend code needed
 
 ## Model Used
 
@@ -117,4 +117,3 @@ The weather tool makes two sequential calls to Open-Meteo's free public APIs: fi
 - Persist conversation history across sessions (e.g., using SQLite or a file)
 - Add error handling in the UI for missing API keys or network failures
 - Write unit tests for the calculator's safe evaluator
-- 
