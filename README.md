@@ -6,12 +6,12 @@ A minimal but production-minded AI assistant built with Python, LangChain, and G
 
 ## Features
 
-- **Native tool calling** — the LLM decides which tool to invoke (or none) based on semantic understanding of the user's intent. No hard-coded routing logic.
-- **Safe calculator** — evaluates arithmetic using Python's `ast` module with a strict operator whitelist. No `eval()`, no code injection risk.
-- **Real-time weather** — fetches live conditions for any city via [Open-Meteo](https://open-meteo.com/) (free, no API key required). Two-step pipeline: geocoding → current forecast.
-- **Conversation memory** — retains the full chat history within the session, enabling multi-turn context.
-- **Multilingual** — the system prompt instructs the model to always respond in the user's language.
-- **Streamlit UI** — a clean chat interface with no frontend code.
+- **Native tool calling**: the LLM decides which tool to invoke (or none) based on semantic understanding of the user's intent. No hard-coded routing logic.
+- **Safe calculator**: evaluates arithmetic using Python's `ast` module with a strict operator whitelist. No `eval()`, no code injection risk.
+- **Real-time weather**: fetches live conditions for any city via [Open-Meteo](https://open-meteo.com/) (free, no API key required). Two-step pipeline: geocoding → current forecast.
+- **Conversation memory**: retains the full chat history within the session, enabling multi-turn context.
+- **Multilingual**:the system prompt instructs the model to always respond in the user's language.
+- **Streamlit UI**: a clean chat interface with no frontend code.
 
 ---
 
@@ -83,9 +83,9 @@ ai-assistant/
 
 ### Why native tool calling, not if-else routing
 
-The simplest implementation would be to scan the user's message for keywords like "calculate" or "weather" and branch accordingly. I deliberately did not do this.
+The simplest implementation would be to scan the user's message for keywords like "calculate" or "weather" and branch accordingly. I deliberately did not do this as using the tool approach is more optimal for any agentic approach, even ones at such a small scale.
 
-Instead, tools are registered with the LLM as typed schemas (name, description, parameters). The model decides whether and which tool to call based on its understanding of the user's *intent* — not the presence of specific words. This means:
+Tools are registered with the LLM as typed schemas (name, description, parameters). The model decides whether and which tool to call based on its understanding of the user's intent, not the presence of specific words. This means:
 
 - `"Quanto é 128 vezes 46?"` routes to the calculator without any Portuguese-specific logic
 - `"Is it raining in Tokyo?"` routes to the weather tool without matching "rain" explicitly
@@ -105,12 +105,12 @@ The calculator uses `ast.parse()` in expression mode and recursively evaluates t
 
 ### Why Groq and Llama 3.3 70B
 
-The challenge allows any accessible LLM. I chose [Groq](https://console.groq.com) as the inference provider for Meta's **Llama 3.3 70B** — an open-source model in the same family as those listed in the spec (Mistral, Zephyr, Llama via Ollama). Groq's free tier provides fast inference with native tool-calling support, no credit card required.
+The challenge allows any accessible LLM. I chose [Groq](https://console.groq.com) as the inference provider for Meta's **Llama 3.3 70B** an open-source model in the same family as those listed in the spec (Mistral, Zephyr, Llama via Ollama). Groq's free tier provides fast inference with native tool-calling support, no credit card required.
 
 Compared to the alternatives listed in the spec:
-- **HuggingFace free inference** — rate-throttled, weaker tool-calling reliability
-- **Local models (Ollama)** — requires the reviewer to download the model locally, breaking reproducibility
-- **Groq + Llama 3.3 70B** — runs in the cloud, free, reproducible, and has solid tool-calling support
+- **HuggingFace free inference**: rate-throttled, weaker tool-calling reliability
+- **Local models (Ollama)**: requires the reviewer to download the model locally, breaking reproducibility
+- **Groq + Llama 3.3 70B**: runs in the cloud, free, reproducible, and has solid tool-calling support
 
 ### Agent flow
 
@@ -144,16 +144,16 @@ Three distinct failure modes are caught and surfaced gracefully — the app neve
 
 ## Bonus features
 
-These were not required by the challenge brief. I added them to think through end-user experience and to push myself technically.
+These were not required by the challenge brief. I added them to think through end-user experience and to push myself technically, as well as have more fun with this project.
 
 ### Reasoning panel (every response)
 
 Every response includes an expandable panel explaining exactly what the agent did and why:
 
-- **Classification** — did the model answer directly or invoke a tool?
-- **Tool call details** — which tool was called, what input was sent, what output was returned
-- **Rationale** — a plain-English explanation of *why* that tool was chosen (or not)
-- **Token usage** — how many input and output tokens this response consumed
+- **Classification**: did the model answer directly or invoke a tool?
+- **Tool call details**: which tool was called, what input was sent, what output was returned
+- **Rationale**: a plain-English explanation of *why* that tool was chosen (or not)
+- **Token usage**: how many input and output tokens this response consumed
 
 The goal is full transparency: a user or reviewer should be able to understand the agent's decision without reading the source code.
 
@@ -173,9 +173,9 @@ The sidebar includes a built-in test runner covering 15 predefined test cases ac
 Each test defines a prompt and expected outcome. After running, results are displayed grouped by category with pass/fail indicators and the full model response for investigation.
 
 The runner includes:
-- **Rate limit handling** — catches `RateLimitError`, parses Groq's suggested retry delay from the error message, and automatically retries the failed test after waiting. No manual intervention needed.
-- **Paced execution** — a 5-second delay between tests to stay within the per-minute token limit
-- **Tolerant expectations** — tests that are susceptible to Groq's intermittent malformed-generation issue accept both `tool_use` and `error` as valid outcomes, since the routing intent is correct either way
+- **Rate limit handling**: catches `RateLimitError`, parses Groq's suggested retry delay from the error message, and automatically retries the failed test after waiting. No manual intervention needed.
+- **Paced execution**: a 5-second delay between tests to stay within the per-minute token limit
+- **Tolerant expectations**: tests that are susceptible to Groq's intermittent malformed-generation issue accept both `tool_use` and `error` as valid outcomes, since the routing intent is correct either way
 
 ---
 
