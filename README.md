@@ -189,11 +189,8 @@ The runner includes:
 - How Groq's rate limiting works at the token level (TPM and TPD), and how to handle it gracefully with automatic retry rather than crashing.
 
 **With more time:**
-
-- **Streaming responses**: so text appears token by token instead of all at once. This is the single biggest UX improvement for a chat interface.
-- **Persistent conversation history**: currently resets on page refresh. SQLite or a simple JSON file would fix this.
-- **Frontend**: a Next.js app with the Vercel AI SDK would give streaming, better mobile support, and a more polished feel. Streamlit is fast to build with but limited for production UX.
-- **Better model**: this project deliberately uses free tools that can produce intermittent errors as shown in the test suite. Given a production budget, I'd use Claude or GPT-4o for more reliable tool-call formatting, stronger multilingual support, and better reasoning on edge cases.
-- **LangGraph multi-agent flow**: the current architecture is a single agent with two tools. A LangGraph graph would allow more complex flows: planning steps, routing between specialised sub-agents, and handling tasks that require multiple sequential decisions.
-- **Evals**: I'd build a proper evaluation set to measure tool-routing accuracy across a diverse set of prompts, languages, and phrasings. The test suite here is a starting point but not a rigorous eval framework.
-- **Prompt injection mitigation**: the real security concern for LLM applications is not SQL injection or code execution (both are blocked at the AST level and by the model's safety training), but prompt injection: a user crafting an input that overrides the system prompt. In production, a separate classification pass before the main agent would mitigate this.
+- **Use paid, higher-capability models** — this project deliberately uses free tools (Groq's free tier, Open-Meteo) as requested by the challenge. Given a production budget, I'd swap in models like GPT-4o or Claude Opus for more reliable tool-call routing, better reasoning, and stronger multilingual support
+- Add **streaming responses** so the text appears token by token instead of all at once
+- Persist conversation history across sessions (e.g., using SQLite or a file)
+- Add error handling in the UI for missing API keys or network failures
+- Write unit tests for the calculator's safe evaluator
