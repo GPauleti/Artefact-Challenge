@@ -1,35 +1,34 @@
-# AI Assistant
+# AI Assistant — Gabriel Pauleti · Artefact Jr. AI Engineer Challenge
 
-A minimal AI assistant built with Python, LangChain, and Groq that automatically decides when to use tools versus answering from its own knowledge.
+A minimal but production-minded AI assistant built with Python, LangChain, and Groq. The agent automatically decides when to use a tool versus answering directly — using the model's native tool-calling mechanism, not keyword matching or if-else routing.
+
+---
 
 ## Features
 
-- **Smart routing** — the LLM decides which tool to call (or none), with no hard-coded keyword matching
-- **Safe calculator** — evaluates arithmetic expressions using Python's `ast` module (no `eval`)
-- **Real-time weather** — fetches live conditions for any city via [Open-Meteo](https://open-meteo.com/) (free, no API key needed)
-- **Conversation memory** — retains chat history within the session
-- **Streamlit UI** — clean chat interface, no frontend code needed
+- **Native tool calling** — the LLM decides which tool to invoke (or none) based on semantic understanding of the user's intent. No hard-coded routing logic.
+- **Safe calculator** — evaluates arithmetic using Python's `ast` module with a strict operator whitelist. No `eval()`, no code injection risk.
+- **Real-time weather** — fetches live conditions for any city via [Open-Meteo](https://open-meteo.com/) (free, no API key required). Two-step pipeline: geocoding → current forecast.
+- **Conversation memory** — retains the full chat history within the session, enabling multi-turn context.
+- **Multilingual** — the system prompt instructs the model to always respond in the user's language.
+- **Streamlit UI** — a clean chat interface with no frontend code.
 
-## Model Used
-
-[Groq](https://console.groq.com) — `llama-3.3-70b-versatile`
-
-Groq provides free API access to Meta's Llama 3.3 70B model with very fast inference. This model supports native tool/function calling, which LangChain uses to route math questions to the calculator automatically.
+---
 
 ## Setup
 
 ### 1. Clone and enter the project
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/GPauleti/Artefact-Challenge
 cd ai-assistant
 ```
 
-### 2. Create a virtual environment (optional but recommended)
+### 2. Create a virtual environment
 
 ```bash
 python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
+.venv\Scripts\activate  # Mac: source .venv/bin/activate
 ```
 
 ### 3. Install dependencies
@@ -40,19 +39,17 @@ pip install -r requirements.txt
 
 ### 4. Configure your API key
 
-Create a `.env` file in the project root:
-
 ```bash
 cp .env.example .env
 ```
 
-Then open `.env` and replace the placeholder with your Groq API key:
+Open `.env` and replace the placeholder with your Groq API key:
 
 ```
 GROQ_API_KEY=your_actual_key_here
 ```
 
-Get a free key at [console.groq.com](https://console.groq.com).
+Get a free key at [console.groq.com](https://console.groq.com). No credit card required.
 
 ### 5. Run the assistant
 
@@ -60,61 +57,143 @@ Get a free key at [console.groq.com](https://console.groq.com).
 streamlit run app.py
 ```
 
-The app will open in your browser at `http://localhost:8501`.
+The app opens in your browser at `http://localhost:8501`.
 
-## Example interactions
-
-| Input | What happens |
-|-------|-------------|
-| `Quanto é 128 vezes 46?` | Agent calls `calculator("128 * 46")` → returns **5888** |
-| `(10 + 5) / 3` | Agent calls `calculator("(10 + 5) / 3")` → returns **5.0** |
-| `Como está o tempo em Tokyo?` | Agent calls `weather("Tokyo")` → returns live temperature, humidity, wind |
-| `What's the weather like in London?` | Agent calls `weather("London")` → returns live conditions |
-| `Quem foi Albert Einstein?` | Agent answers directly from its knowledge |
-| `What is the capital of Brazil?` | Agent answers directly from its knowledge |
+---
 
 ## Project structure
 
 ```
 ai-assistant/
-├── app.py                        # Streamlit UI
+├── app.py                    # Streamlit UI + sidebar (token gauge, test suite)
 ├── assistant/
-│   ├── agent.py                  # LangChain agent + Groq LLM setup
+│   ├── agent.py              # LangChain agent, Groq LLM, error handling
 │   └── tools/
-│       ├── calculator.py         # Safe arithmetic tool (@tool)
-│       └── weather.py            # Real-time weather via Open-Meteo (@tool)
-├── .env                          # Your API key (not committed)
-├── .env.example                  # Template
+│       ├── calculator.py     # Safe AST-based arithmetic tool
+│       └── weather.py        # Real-time weather via Open-Meteo
+├── .env                      # Your API key (not committed)
+├── .env.example              # Key template
 ├── requirements.txt
 └── README.md
 ```
 
-## Implementation logic
+---
 
-The core idea is to let the LLM itself decide when to use a tool — this is called **tool calling** (also known as function calling). Here is the flow:
+## Key logical decisions
 
-1. The user sends a message via the Streamlit chat interface.
-2. The message and conversation history are passed to a LangChain agent (a compiled LangGraph graph).
-3. The agent sends the input to the Groq LLM along with a description of available tools.
-4. If the LLM determines a tool is needed, it emits a structured tool call. The agent intercepts it, runs the tool, and feeds the result back to the LLM.
-5. The LLM composes a final response using the tool's output.
-6. If no tool is needed, the LLM answers directly.
+### Why native tool calling, not if-else routing
 
-The calculator uses Python's `ast` module to parse and evaluate expressions safely — only arithmetic operators are allowed, preventing any code injection.
+The simplest implementation would be to scan the user's message for keywords like "calculate" or "weather" and branch accordingly. I deliberately did not do this.
 
-The weather tool makes two sequential calls to Open-Meteo's free public APIs: first to the geocoding endpoint to resolve a city name into coordinates, then to the forecast endpoint to fetch current conditions. No API key is required.
+Instead, tools are registered with the LLM as typed schemas (name, description, parameters). The model decides whether and which tool to call based on its understanding of the user's *intent* — not the presence of specific words. This means:
 
-## What I learned and what I'd do differently with more time
+- `"Quanto é 128 vezes 46?"` routes to the calculator without any Portuguese-specific logic
+- `"Is it raining in Tokyo?"` routes to the weather tool without matching "rain" explicitly
+- `"What is the capital of Brazil?"` answers directly because no tool is semantically needed
+
+This is how production agents work. Keyword routing breaks on paraphrasing, other languages, and edge cases. Tool-calling generalises.
+
+### Why a safe calculator instead of asking the LLM to do the math
+
+LLMs are probabilistic. They can approximate arithmetic but they are not reliable calculators — especially for large numbers, nested expressions, or modular arithmetic. Delegating to a deterministic tool guarantees exact results every time.
+
+The calculator uses `ast.parse()` in expression mode and recursively evaluates the AST against an explicit operator whitelist (`+`, `-`, `*`, `/`, `//`, `%`, `**`). Any node type not on the whitelist raises a `ValueError`. This means:
+
+- `eval("__import__('os').system('ls')")` is rejected at the AST level — `ast.Call` is not a permitted node
+- `sqrt(16)` is not in the whitelist, but the LLM reformulates it to `16 ** 0.5` before calling the tool — the model acts as a smart preprocessor
+- Division by zero returns a controlled error string, not an exception that crashes the app
+
+### Why Groq and Llama 3.3 70B
+
+The challenge allows any accessible LLM. I chose [Groq](https://console.groq.com) as the inference provider for Meta's **Llama 3.3 70B** — an open-source model in the same family as those listed in the spec (Mistral, Zephyr, Llama via Ollama). Groq's free tier provides fast inference with native tool-calling support, no credit card required.
+
+Compared to the alternatives listed in the spec:
+- **HuggingFace free inference** — rate-throttled, weaker tool-calling reliability
+- **Local models (Ollama)** — requires the reviewer to download the model locally, breaking reproducibility
+- **Groq + Llama 3.3 70B** — runs in the cloud, free, reproducible, and has solid tool-calling support
+
+### Agent flow
+
+```
+User message
+    │
+    ▼
+LangChain agent (create_agent)
+    │
+    ├─ LLM decides: direct answer?  ──────────────────► text response
+    │
+    └─ LLM decides: call a tool?
+           │
+           ├─► calculator("expression") ──► result ──► LLM composes final answer
+           └─► weather("city")         ──► result ──► LLM composes final answer
+```
+
+The agent loop is implemented via LangChain's `create_agent`, which internally uses LangGraph's `create_react_agent`. LangGraph is a transitive dependency of LangChain and does not need to be listed separately in `requirements.txt`.
+
+### Error handling
+
+Three distinct failure modes are caught and surfaced gracefully — the app never crashes:
+
+| Error | Cause | Handling |
+|---|---|---|
+| `BadRequestError` (400) | Model generated a malformed tool call format | Shown in reasoning panel with the raw failed generation for transparency |
+| `RateLimitError` (429) | Groq free-tier token limit exceeded | Shown in reasoning panel with a clear explanation that this is a Groq constraint, not an app failure |
+| Tool execution errors | Division by zero, unknown city, invalid expression | Returned as error strings from the tool, shown in the reasoning panel output |
+
+---
+
+## Bonus features
+
+These were not required by the challenge brief. I added them to think through end-user experience and to push myself technically.
+
+### Reasoning panel (every response)
+
+Every response includes an expandable panel explaining exactly what the agent did and why:
+
+- **Classification** — did the model answer directly or invoke a tool?
+- **Tool call details** — which tool was called, what input was sent, what output was returned
+- **Rationale** — a plain-English explanation of *why* that tool was chosen (or not)
+- **Token usage** — how many input and output tokens this response consumed
+
+The goal is full transparency: a user or reviewer should be able to understand the agent's decision without reading the source code.
+
+### Token usage gauge
+
+The sidebar displays a circular SVG gauge tracking cumulative token consumption for the session against Groq's free-tier limits:
+
+- **Daily limit:** 100,000 tokens (gauge fills as you use them)
+- **Per-minute limit:** 12,000 tokens (shown as a static reference — it resets every 60 seconds, so a filling gauge would be misleading)
+- The gauge changes colour from green → orange → red as you approach the daily cap
+- Links directly to the Groq usage dashboard for full account-level tracking
+
+### Automated test suite
+
+The sidebar includes a built-in test runner covering 15 predefined test cases across four categories: Calculator (happy and sad paths), Weather (happy and sad paths), Direct answers, and Security inputs.
+
+Each test defines a prompt and expected outcome. After running, results are displayed grouped by category with pass/fail indicators and the full model response for investigation.
+
+The runner includes:
+- **Rate limit handling** — catches `RateLimitError`, parses Groq's suggested retry delay from the error message, and automatically retries the failed test after waiting. No manual intervention needed.
+- **Paced execution** — a 5-second delay between tests to stay within the per-minute token limit
+- **Tolerant expectations** — tests that are susceptible to Groq's intermittent malformed-generation issue accept both `tool_use` and `error` as valid outcomes, since the routing intent is correct either way
+
+---
+
+## What I learned and what I'd do differently
 
 **Learned:**
-- How LangChain's tool-calling agent loop works under the hood (LLM → tool call → result → LLM)
-- Why safe expression evaluation with `ast` is important versus raw `eval`
-- How Groq's free API tier makes rapid prototyping with powerful LLMs accessible
+
+- How LangChain's tool-calling agent loop works under the hood: the LLM emits a structured `tool_use` response, the framework dispatches it, and the result is fed back to the LLM to compose the final answer. Understanding this loop is what makes agentic systems debuggable.
+- Why safe expression evaluation with `ast` matters versus raw `eval` — and that the LLM itself can act as a preprocessing layer, reformulating `sqrt(16)` into `16 ** 0.5` before the tool even sees it.
+- That open-source models on free inference tiers have inconsistent tool-call formatting under certain conditions (informal language, special syntax). This is a real production consideration: reliability of tool calling varies significantly between models and providers.
+- How Groq's rate limiting works at the token level (TPM and TPD), and how to handle it gracefully with automatic retry rather than crashing.
 
 **With more time:**
-- **Use paid, higher-capability models** — this project deliberately uses free tools (Groq's free tier, Open-Meteo) as requested by the challenge. Given a production budget, I'd swap in models like GPT-4o or Claude Opus for more reliable tool-call routing, better reasoning, and stronger multilingual support
-- Add **streaming responses** so the text appears token by token instead of all at once
-- Persist conversation history across sessions (e.g., using SQLite or a file)
-- Add error handling in the UI for missing API keys or network failures
-- Write unit tests for the calculator's safe evaluator
-- 
+
+- **Streaming responses**: so text appears token by token instead of all at once. This is the single biggest UX improvement for a chat interface.
+- **Persistent conversation history**: currently resets on page refresh. SQLite or a simple JSON file would fix this.
+- **Frontend**: a Next.js app with the Vercel AI SDK would give streaming, better mobile support, and a more polished feel. Streamlit is fast to build with but limited for production UX.
+- **Better model**: this project deliberately uses free tools that can produce intermittent errors as shown in the test suite. Given a production budget, I'd use Claude or GPT-4o for more reliable tool-call formatting, stronger multilingual support, and better reasoning on edge cases.
+- **LangGraph multi-agent flow**: the current architecture is a single agent with two tools. A LangGraph graph would allow more complex flows: planning steps, routing between specialised sub-agents, and handling tasks that require multiple sequential decisions.
+- **Evals**: I'd build a proper evaluation set to measure tool-routing accuracy across a diverse set of prompts, languages, and phrasings. The test suite here is a starting point but not a rigorous eval framework.
+- **Prompt injection mitigation**: the real security concern for LLM applications is not SQL injection or code execution (both are blocked at the AST level and by the model's safety training), but prompt injection: a user crafting an input that overrides the system prompt. In production, a separate classification pass before the main agent would mitigate this.
