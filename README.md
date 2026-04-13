@@ -1,6 +1,6 @@
 # AI Assistant — Gabriel Pauleti · Artefact Jr. AI Engineer Challenge
 
-A minimal but production-minded AI assistant built with Python, LangChain, and Groq. The agent automatically decides when to use a tool versus answering directly — using the model's native tool-calling mechanism, not keyword matching or if-else routing.
+A minimal but production-minded AI assistant built with Python, LangChain, and Groq. The agent automatically decides when to use a tool versus answering directly — using the model's native tool-calling mechanism, not keyword matching or if-else routing. Built as the solution for Artefact's Challenge Case for the Jr. AI Engineer role in April 2026.
 
 ---
 
@@ -97,7 +97,7 @@ This is how production agents work. Keyword routing breaks on paraphrasing, othe
 
 LLMs are probabilistic. They can approximate arithmetic but they are not reliable calculators — especially for large numbers, nested expressions, or modular arithmetic. Delegating to a deterministic tool guarantees exact results every time.
 
-The calculator uses `ast.parse()` in expression mode and recursively evaluates the AST against an explicit operator whitelist (`+`, `-`, `*`, `/`, `//`, `%`, `**`). Any node type not on the whitelist raises a `ValueError`. This means:
+The calculator uses `ast.parse()` in expression mode and recursively evaluates the AST against an explicit operator whitelist (`+`, `-`, `*`, `/`, `//`, `%`, `**`). These operators were explicitly chosen due to their ability to handle most arithmetic operators with rational numbers while avoiding the risk of any python injection via the calculator tool. Any node type not on the whitelist raises a `ValueError`. This means:
 
 - `eval("__import__('os').system('ls')")` is rejected at the AST level — `ast.Call` is not a permitted node
 - `sqrt(16)` is not in the whitelist, but the LLM reformulates it to `16 ** 0.5` before calling the tool — the model acts as a smart preprocessor
